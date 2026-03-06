@@ -1,46 +1,112 @@
 ---
 name: llms-txt-fetcher
-description: 获取和解析 llms.txt 文档（AI 模型交互标准格式）。当用户需要：(1) 获取某个网站的 llms.txt 文件，(2) 了解 AI 服务的模型支持情况，(3) 查询 LLM 集成文档，(4) 提到 "llms.txt"、"llm 文档"、"AI 文档索引"、"模型端点" 时使用此技能。
+description: 获取和解析 llms.txt 文档（LLM 友好的网站内容索引）。当用户需要：(1) 了解某技术/框架的核心文档结构，(2) 快速获取某网站的关键信息导航，(3) 提到 "llms.txt"、"llm 文档"、"文档索引" 时，(4) **Agent 不了解某块知识需要快速查阅时**（如 CopilotKit、Next.js 等），使用此技能通过预配置的 llms.txt URL 获取结构化文档指引。支持配置多个站点的 llms.txt 地址。
 ---
 
 # llms.txt Fetcher — Expert Guide
 
 ## 核心心智模式
 
-**llms.txt 是什么**：一种新兴标准，让网站声明其支持的 AI 模型、能力端点、交互协议。类似 robots.txt 但用于 AI 集成。
+**llms.txt 是什么**：
 
-**获取前的思考**：
+- llmstxt 是一个**LLM 友好的网站内容索引**，类似网站的"文档地图"
+- 它是一个 markdown 文件，提供网站的简短摘要、关键信息，以及指向详细 markdown 文档的链接
+- 当 Agent 不了解某块知识时，通过 llmstxt 可以快速获取该技术的核心文档结构和关键信息
 
-- 这个网站是否有 AI 相关服务？（有 API 文档 ≠ 有 llms.txt）
-- 用户真正需要的是什么？（可能是 API 文档而非 llms.txt）
-- 如果 llms.txt 不存在，备选方案是什么？
+**典型使用场景**：
+
+- Agent 需要了解 CopilotKit 的核心概念和 API → 查询 `https://docs.copilotkit.ai/llms.txt`
+- Agent 需要了解 Next.js 的文档结构 → 查询 `https://nextjs.org/llms.txt`
+- Agent 需要快速掌握某个技术的要点 → 查询对应网站的 llms.txt
+
+**配置化 URL 设计**：
+支持使用简短的 key 来引用预配置的 llms.txt 地址，格式为 `key: url`：
+
+```
+copilotkit: https://docs.copilotkit.ai/llms.txt
+nextjs: https://nextjs.org/llms.txt
+fasthtml: https://fastht.ml/llms.txt
+```
+
+---
+
+## 可配置 URL 列表
+
+### 默认配置位置
+
+在 `references/configured-sites.md` 中维护已配置的 llms.txt 地址列表（如存在该文件则读取）。
+
+### 常用配置示例
+
+```markdown
+## 前端/全栈框架
+
+- nextjs: https://nextjs.org/llms.txt
+- nuxt: https://nuxt.com/llms.txt
+- remix: https://remix.run/llms.txt
+
+## AI/Agent 框架
+
+- copilotkit: https://docs.copilotkit.ai/llms.txt
+- langchain: https://python.langchain.com/llms.txt
+- crewai: https://docs.crewai.com/llms.txt
+
+## 全栈框架
+
+- fasthtml: https://fastht.ml/llms.txt
+- laravel: https://laravel.com/llms.txt
+```
+
+### 如何添加新配置
+
+当用户需要使用新的 llms.txt 地址时：
+
+1. 检查是否已有该站点的配置
+2. 如无配置，询问用户是否需要添加到 `references/configured-sites.md`
+3. 或直接使用完整 URL 获取
 
 ---
 
 ## 获取策略 — 决策树
 
+### 第一步：解析用户输入
+
+用户可能以以下方式请求：
+
+1. **使用配置 key**：`"获取 copilotkit 的 llms.txt"` → 查找配置中的 URL
+2. **直接给 URL**：`"获取 https://docs.copilotkit.ai/llms.txt 的内容"` → 直接使用
+3. **给域名**：`"获取 nextjs.org 的 llms.txt"` → 拼接 URL
+
+### 第二步：获取流程
+
 ```
 用户请求获取 llms.txt
          │
          ▼
-┌─────────────────────┐
-│ 用户是否指定了域名？ │
-└──────────┬──────────┘
+┌─────────────────────────┐
+│ 输入类型是什么？          │
+└──────────┬──────────────┘
            │
-    ┌──────┴──────┐
-    │             │
-   是            否
-    │             │
-    ▼             ▼
-使用指定域名   使用默认域名
-                (llmstxt.org)
+    ┌──────┼──────┐
+    │      │      │
+  配置 key  完整 URL  域名
+    │      │      │
+    │      │      ▼
+    │      │  按优先级尝试：
+    │      │  1. https://<domain>/llms.txt
+    │      │  2. https://<domain>/.well-known/llms.txt
+    │      │  3. https://www.<domain>/llms.txt
+    │      │
+    │      ▼
+    │   直接获取
+    │
+    ▼
+查找 references/configured-sites.md
+获取对应 URL
     │
     ▼
 ┌─────────────────────────────────┐
-│ 按优先级尝试以下位置（依次）：    │
-│ 1. https://<domain>/llms.txt    │
-│ 2. https://<domain>/.well-known/llms.txt │
-│ 3. https://www.<domain>/llms.txt │
+│ 使用 curl 获取内容并验证          │
 └─────────────────────────────────┘
 ```
 
@@ -76,16 +142,33 @@ curl -sSL --max-time 10 -w "\nContent-Type: %{content_type}\nHTTP Code: %{http_c
 
 ### Step 3: 解析内容
 
-**标准字段识别**：
+**llms.txt 标准结构**：
 
-| 字段           | 说明               | 示例                                    |
-| -------------- | ------------------ | --------------------------------------- |
-| `models`       | 支持的 AI 模型列表 | `models: claude-sonnet-4-6, gpt-4o`     |
-| `endpoints`    | API 端点           | `endpoints: https://api.example.com/v1` |
-| `capabilities` | 功能列表           | `capabilities: chat, vision, tools`     |
-| `auth`         | 认证方式           | `auth: bearer, api-key`                 |
-| `rate_limits`  | 速率限制           | `rate_limits: 100/min`                  |
-| `docs`         | 相关文档链接       | `docs: https://example.com/ai-docs`     |
+| 部分     | 说明                 | 示例                         |
+| -------- | -------------------- | ---------------------------- |
+| H1 标题  | 项目/网站名称        | `# FastHTML`                 |
+| 引用摘要 | 简短的项目概述       | `> FastHTML 是一个...`       |
+| 链接列表 | 指向详细文档的链接   | `- [安装指南](./install.md)` |
+| 可选章节 | 按主题组织的额外链接 | `## API 文档`                |
+
+**解析后的输出格式**：
+
+```markdown
+# [项目名] llms.txt
+
+## 摘要
+
+[引用摘要内容]
+
+## 可用文档
+
+- [文档名 1](链接 1) - [如有描述]
+- [文档名 2](链接 2) - [如有描述]
+
+## 建议阅读顺序
+
+[根据内容推断或列出推荐顺序]
+```
 
 ---
 
@@ -100,7 +183,7 @@ NEVER 假设获取到的就是有效的 llms.txt：
 
 NEVER 不验证就展示给用户：
 
-- 先检查内容是否包含预期字段
+- 先检查内容是否为 markdown 格式（是否有 H1 引用、链接列表）
 - 如果看起来像 HTML，告知用户"可能不是有效文档"
 
 NEVER 只尝试一次就放弃：
@@ -114,6 +197,10 @@ NEVER 混淆 llms.txt 与：
 - API 文档（通常是 /docs 或 /api/docs）
 - OpenAPI/Swagger 规范（/openapi.json）
 - robots.txt（用于爬虫，不是 AI）
+
+NEVER 忽略配置的 key：
+
+- 用户说"copilotkit" → 应先查找配置，而不是直接拼接域名
 ```
 
 ---
