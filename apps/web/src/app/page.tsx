@@ -1,6 +1,6 @@
 "use client";
 
-import { useCoAgent, useCopilotAction } from "@copilotkit/react-core";
+import { useCoAgent, useFrontendTool } from "@copilotkit/react-core";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import type { CopilotKitCSSProperties } from "@copilotkit/react-ui";
 import { useState } from "react";
@@ -11,8 +11,8 @@ const ZERO = 0;
 export default function CopilotKitPage() {
   const [themeColor, setThemeColor] = useState("#6366f1");
 
-  // 🪁 Frontend Actions: https://docs.copilotkit.ai/guides/frontend-actions
-  useCopilotAction({
+  // 🪁 Frontend Tools: https://docs.copilotkit.ai/guides/frontend-tools
+  useFrontendTool({
     description: "Set the theme color of the page.",
     handler({ themeColor: newThemeColor }) {
       setThemeColor(newThemeColor);
@@ -22,7 +22,7 @@ export default function CopilotKitPage() {
       {
         name: "themeColor",
         description: "The theme color to set. Make sure to pick nice colors.",
-        required: true,
+        type: "string",
       },
     ],
   });
@@ -57,8 +57,8 @@ const YourMainContent = ({ themeColor }: { themeColor: string }) => {
     name: "starterAgent",
   });
 
-  // 🪁 Frontend Actions: https://docs.copilotkit.ai/coagents/frontend-actions
-  useCopilotAction(
+  // 🪁 Frontend Tools: https://docs.copilotkit.ai/coagents/frontend-tools
+  useFrontendTool(
     {
       description: "Add a proverb to the list.",
       handler: ({ proverb }) => {
@@ -72,7 +72,7 @@ const YourMainContent = ({ themeColor }: { themeColor: string }) => {
         {
           name: "proverb",
           description: "The proverb to add. Make it witty, short and concise.",
-          required: true,
+          type: "string",
         },
       ],
     },
@@ -80,11 +80,11 @@ const YourMainContent = ({ themeColor }: { themeColor: string }) => {
   );
 
   //🪁 Generative UI: https://docs.copilotkit.ai/coagents/generative-ui
-  useCopilotAction({
+  useFrontendTool({
     available: "disabled",
     description: "Get the weather for a given location.",
     name: "getWeather",
-    parameters: [{ name: "location", type: "string", required: true }],
+    parameters: [{ name: "location", type: "string" }],
     render: ({ args }) => <WeatherCard location={args.location} themeColor={themeColor} />,
   });
 
