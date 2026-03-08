@@ -11,7 +11,7 @@ export default defineConfig({
   },
 
   // 额外插件（Web 专用）
-  plugins: ["import", "jsx-a11y", "nextjs", "react", "react-hooks"],
+  plugins: ["import", "jsx-a11y", "nextjs", "react"],
 
   // Web 专用规则
   rules: {
